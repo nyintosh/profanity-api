@@ -7,6 +7,7 @@ An experimental API for detecting hate speech and profanity, incorporating rate 
 ## Feature
 
 - Check Profanity
+- Request Validation
 - Rate Limiting Api
 
 ## Table of Contents
