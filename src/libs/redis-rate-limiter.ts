@@ -21,7 +21,7 @@ export class RedisRateLimiter {
 			this.instance = new Ratelimit({
 				ephemeralCache: cache,
 				redis: redisClient,
-				limiter: Ratelimit.slidingWindow(10, '30 s'),
+				limiter: Ratelimit.slidingWindow(10, '1 m'),
 			});
 		}
 
