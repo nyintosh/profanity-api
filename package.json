@@ -1,7 +1,7 @@
 {
 	"name": "profanity-api",
 	"version": "1.0.0",
-	"description": "An experimental API for detecting hate speech and profanity, incorporating rate limiting functionality, and deploying it on Cloudflare Workers.",
+	"description": "An experimental API for detecting hate speech and profanity, incorporating rate limiting and request validation functionality, and deploying it on Cloudflare Workers.",
 	"main": "index.ts",
 	"scripts": {
 		"db:seed": "tsx ./src/libs/seed.ts",
