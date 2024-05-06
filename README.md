@@ -115,10 +115,9 @@ If you want to add additional features and improvements, we welcome contribution
 
 You can test the API of the project at [https://profanity-api.nyintosh.workers.dev](https://profanity-api.nyintosh.workers.dev). Below are the documentation details for the API endpoint:
 
-- **Method:** POST
 - **Endpoint:** /
+- **Method:** POST
 - **Content Type:** application/json
-- **Request Body:** `{ text: string; }`
 - **Request Body:**
   ```json
   {
