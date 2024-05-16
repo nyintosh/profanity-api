@@ -81,20 +81,16 @@ app.post(
 				}),
 			]);
 
-			const maxScore = Math.max(...[...flags].map((f) => f.score));
+			const isVulgar = flags.size > 0;
+			const avgScore = isVulgar
+				? [...flags].reduce((a, b) => a + b.score, 0) / flags.size
+				: 0;
 
-			if (flags.size > 0) {
-				return ctx.json({
-					isProfanity: true,
-					flags: [...flags].map((f) => f.text),
-					score: maxScore,
-				});
-			} else {
-				return ctx.json({
-					isProfanity: false,
-					score: maxScore,
-				});
-			}
+			return ctx.json({
+				isVulgar,
+				...(isVulgar && { flags: [...flags].map((f) => f.text) }),
+				avgScore,
+			});
 		} catch (error) {
 			console.error(error);
 			return ctx.json({ error: 'Unexpected error occurred' }, 500);

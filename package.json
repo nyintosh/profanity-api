@@ -4,10 +4,10 @@
 	"description": "An experimental API for detecting hate speech and profanity, incorporating rate limiting and request validation functionality, and deploying it on Cloudflare Workers.",
 	"main": "index.ts",
 	"scripts": {
-		"db:seed": "tsx ./src/libs/seed.ts",
-		"dev": "wrangler dev ./src/index.ts",
+		"db:seed": "tsx ./src/db/seed.ts",
 		"format": "prettier \"./src/**/*\" --write --ignore-unknown",
-		"deploy": "wrangler deploy --minify ./src/index.ts"
+		"wrangler:dev": "wrangler dev ./src/index.ts",
+		"wrangler:deploy": "wrangler deploy --minify ./src/index.ts"
 	},
 	"keywords": [],
 	"author": "",

@@ -14,15 +14,9 @@ async function parseCSV(filePath: string): Promise<Row[]> {
 
 		fs.createReadStream(filePath)
 			.pipe(csv({ separator: ',' }))
-			.on('data', (row) => {
-				rows.push(row);
-			})
-			.on('error', (error) => {
-				reject(error);
-			})
-			.on('end', () => {
-				resolve(rows);
-			});
+			.on('data', (row) => rows.push(row))
+			.on('error', (error) => reject(error))
+			.on('end', () => resolve(rows));
 	});
 }
 
