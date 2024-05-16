@@ -13,7 +13,7 @@ const app = new Hono();
 app.use(cors());
 app.use(rateLimiter);
 
-const WHITE_LIST: string[] = [];
+const WHITE_LIST: string[] = [] as const;
 
 app.post(
 	'/',
