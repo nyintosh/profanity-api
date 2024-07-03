@@ -1,5 +1,7 @@
 # Profanity (API)
 
+<img width="1408" alt="SCR-20240703-krqd" src="https://github.com/nyintosh/profanity-api/assets/56629705/ba9d2efc-306f-4032-b25b-40807fd07b84">
+
 ## Description
 
 An experimental API for detecting hate speech and profanity, incorporating rate limiting and request validation functionality, and deploying it on Cloudflare Workers.
