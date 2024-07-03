@@ -6,7 +6,7 @@
 	"scripts": {
 		"db:seed": "tsx ./src/db/seed.ts",
 		"format": "prettier \"./src/**/*\" --write --ignore-unknown",
-		"wrangler:dev": "wrangler dev ./src/index.ts",
+		"dev": "wrangler dev ./src/index.ts",
 		"wrangler:deploy": "wrangler deploy --minify ./src/index.ts"
 	},
 	"keywords": [],
