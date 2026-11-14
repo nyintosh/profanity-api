@@ -1,0 +1,23 @@
+name = "profanity-api"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+minify = true
+
+# The term list is bundled as text for exact single-word matches.
+rules = [{ type = "Text", globs = ["**/*.csv"], fallthrough = true }]
+
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "profanity-api"
+remote = true
+
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 10, period = 60 }
+
+[observability]
+enabled = true

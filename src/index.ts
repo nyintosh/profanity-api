@@ -1,94 +1,93 @@
 import { zValidator } from '@hono/zod-validator';
-import { Index } from '@upstash/vector';
 import { Hono } from 'hono';
-import { env } from 'hono/adapter';
 import { cors } from 'hono/cors';
 import { z } from 'zod';
 
-import { rateLimiter } from '@/middlewares';
+import dataset from '../dataset.csv';
 import { textToSemantics, textToWords } from '@/utils';
 
-const app = new Hono();
+const EMBEDDING_MODEL = '@cf/baai/bge-small-en-v1.5';
+// Tuned for bge-small-en-v1.5: clean phrases scored up to ~0.69, profane variants from ~0.88.
+const SEMANTIC_THRESHOLD = 0.8;
+// Each chunk is one Vectorize query; 500 characters keeps a request under the free plan's 50 subrequests.
+const MAX_TEXT_LENGTH = 500;
+
+const TERMS = new Set(
+	dataset
+		.split('\n')
+		.slice(1)
+		.map((term) => term.trim().toLowerCase())
+		.filter(Boolean),
+);
+
+const app = new Hono<{ Bindings: Env }>();
 
 app.use(cors());
-app.use(rateLimiter);
 
-const WHITE_LIST: string[] = [] as const;
+app.get('/', (ctx) =>
+	ctx.json({
+		name: 'profanity-api',
+		usage: `POST / with JSON {"text": "..."} (2 to ${MAX_TEXT_LENGTH} characters)`,
+		response: '{ isVulgar: boolean, flags?: string[], avgScore: number }',
+		source: 'https://github.com/nyintosh/profanity-api',
+	}),
+);
 
 app.post(
 	'/',
-	zValidator('json', z.object({ text: z.string().min(2).max(1000) })),
+	zValidator(
+		'json',
+		z.object({ text: z.string().min(2).max(MAX_TEXT_LENGTH) }),
+	),
 	async (ctx) => {
 		try {
-			const rateLimiter = ctx.get('rate-limiter');
-			const ip = ctx.req.raw.headers.get('Cf-Connecting-IP');
-			const res = await rateLimiter.limit(ip ?? 'anonynmous');
+			const ip = ctx.req.header('Cf-Connecting-IP') ?? 'anonymous';
+			const { success } = await ctx.env.RATE_LIMITER.limit({ key: ip });
 
-			if (!res.success) {
+			if (!success) {
 				return ctx.json({ message: 'Too many requests' }, 429);
 			}
 
-			const { VECTOR_URL, VECTOR_TOKEN } = env<Environment>(ctx);
+			const { text } = ctx.req.valid('json');
+			const flags = new Map<string, number>();
 
-			const index = new Index({
-				url: VECTOR_URL,
-				token: VECTOR_TOKEN,
-				cache: false,
-			});
+			for (const word of textToWords(text)) {
+				if (TERMS.has(word)) flags.set(word, 1);
+			}
 
-			let { text } = ctx.req.valid('json');
+			const semantics = textToSemantics(text);
 
-			text = text
-				.split(/\s/)
-				.filter((word) => !WHITE_LIST.includes(word.toLowerCase()))
-				.join(' ');
+			if (semantics.length) {
+				const embeddings = await ctx.env.AI.run(EMBEDDING_MODEL, {
+					text: semantics,
+				});
+				if (!('data' in embeddings) || !embeddings.data) {
+					throw new Error('No embeddings returned');
+				}
 
-			const [words, semantics] = await Promise.all([
-				textToWords(text),
-				textToSemantics(text),
-			]);
+				const results = await Promise.all(
+					embeddings.data.map((values) =>
+						ctx.env.VECTORIZE.query(values, { topK: 1, returnMetadata: 'all' }),
+					),
+				);
 
-			const flags = new Set<{ text: string; score: number }>();
-
-			await Promise.all([
-				...words.map(async (word) => {
-					const [vector] = await index.query({
-						topK: 1,
-						data: word,
-						includeMetadata: true,
-					});
-
-					if (vector?.score > 0.95) {
-						flags.add({
-							text: vector.metadata!.text as string,
-							score: vector.score,
-						});
+				for (const { matches } of results) {
+					const [match] = matches;
+					if (match && match.score > SEMANTIC_THRESHOLD) {
+						const term = String(match.metadata?.text);
+						flags.set(term, Math.max(flags.get(term) ?? 0, match.score));
 					}
-				}),
-				...semantics.map(async (semantic) => {
-					const [vector] = await index.query({
-						topK: 1,
-						data: semantic,
-						includeMetadata: true,
-					});
-
-					if (vector?.score > 0.86) {
-						flags.add({
-							text: vector.metadata!.text as string,
-							score: vector.score,
-						});
-					}
-				}),
-			]);
+				}
+			}
 
 			const isVulgar = flags.size > 0;
 			const avgScore = isVulgar
-				? [...flags].reduce((a, b) => a + b.score, 0) / flags.size
+				? [...flags.values()].reduce((a, b) => a + b, 0) / flags.size
 				: 0;
 
 			return ctx.json({
 				isVulgar,
-				...(isVulgar && { flags: [...flags].map((f) => f.text) }),
+				...(isVulgar && { flags: [...flags.keys()] }),
 				avgScore,
 			});
 		} catch (error) {

@@ -17,7 +17,6 @@ An experimental API for detecting hate speech and profanity, incorporating rate 
 - [Tech Stack](#tech-stack)
 - [Installation](#installation)
 - [Important](#important)
-- [Environment Variables](#environment-variables)
 - [Starting the Development Server](#starting-the-development-server)
 - [Contributing](#contributing)
 - [Live Preview](#live-preview)
@@ -27,9 +26,9 @@ An experimental API for detecting hate speech and profanity, incorporating rate 
 - TypeScript
 - Hono
 - Zod
-- Upstash Redis
-- Upstash Rate Limit
-- Upstash Vector
+- Cloudflare Workers AI (`bge-small-en-v1.5` embeddings)
+- Cloudflare Vectorize
+- Cloudflare Workers Rate Limiting
 
 ## Installation
 
@@ -70,16 +69,16 @@ pnpm install
 
 ## Important
 
-To run this locally, make sure you've set up Redis and Vector on [Upstash](https://upstash.com) and obtained API keys. Alternatively, you can utilize similar technologies and update the configuration accordingly.
+Everything runs on Cloudflare's free Workers plan and needs no API keys. The bindings are declared in `wrangler.toml`.
 
-## Environment Variables
+Single words are matched against the term list in `dataset.csv`. Short phrases are embedded with Workers AI and compared against the same terms in a Vectorize index. To set it up in your own account:
 
-This project requires the following environment variables:
-
-- `VECTOR_URL`
-- `VECTOR_TOKEN`
-
-Ensure environment variables are set and `wrangler.toml` is configured according to the provided example file for seamless development.
+```bash
+npx wrangler login
+npx wrangler vectorize create profanity-api --dimensions=384 --metric=cosine
+cf auth login   # the Cloudflare CLI: npm install --global cf
+npm run db:seed
+```
 
 ## Starting the Development Server
 
@@ -123,6 +122,16 @@ You can test the API of the project at [https://profanity-api.nyintosh.workers.d
 - **Request Body:**
   ```json
   {
-  	"text": "string"
+  	"text": "string (2 to 500 characters)"
   }
   ```
+- **Response:**
+  ```json
+  {
+  	"isVulgar": true,
+  	"flags": ["matched term"],
+  	"avgScore": 0.93
+  }
+  ```
+
+Each IP can make 10 requests per minute. `GET /` returns a short usage summary.
